@@ -1,0 +1,353 @@
+"""
+All the different models used in the deep learning test.
+"""
+
+from tensorflow import keras
+
+
+class UNetModel:
+    """
+    First model and simplest model used.
+    """
+
+    def __init__(self, image_size=512, kernel_size=(3, 3)):
+        # Arguments
+        self.image_size = image_size
+        self.kernel_size = kernel_size
+        
+    def Down_block(self, x, filters, padding='same', strides=1):
+        """
+        To downscale the input.
+        """
+
+        c = keras.layers.Conv2D(filters, self.kernel_size, padding=padding, strides=strides, activation='relu')(x)
+        c = keras.layers.Conv2D(filters, self.kernel_size, padding=padding, strides=strides, activation='relu')(c)
+        p = keras.layers.MaxPool2D((2, 2), (2 ,2))(c)
+        return c, p
+
+    def Up_block(self, x, skip, filters, padding='same', strides=1):
+        """
+        To upscale the downscaled input.
+        """
+
+        us = keras.layers.UpSampling2D((2, 2))(x)
+        concat = keras.layers.Concatenate()([us, skip])
+        c = keras.layers.Conv2D(filters, self.kernel_size, padding=padding, strides=strides, activation='relu')(concat)
+        c = keras.layers.Conv2D(filters, self.kernel_size, padding=padding, strides=strides, activation='relu')(c)
+        return c
+
+    def Bottleneck(self, x, filters, padding='same', strides=1):
+        """
+        Bridge between the downscaling and the upscaling.
+        """
+
+        c = keras.layers.Conv2D(filters, self.kernel_size, padding=padding, strides=strides, activation='relu')(x)
+        c = keras.layers.Conv2D(filters, self.kernel_size, padding=padding, strides=strides, activation='relu')(c)
+        return c
+
+    def UNet(self):
+        """
+        Main structure  of the UNet model putting the downscaling, the bridge and the upscaling together.
+        """
+
+        f = [32, 64, 128, 256, 512, 1024]
+        inputs = keras.layers.Input((self.image_size, self.image_size, 2))
+
+        p0 = inputs
+        c1, p1 = self.Down_block(p0, f[0])
+        c2, p2 = self.Down_block(p1, f[1])
+        c3, p3 = self.Down_block(p2, f[2])
+        c4, p4 = self.Down_block(p3, f[3])
+        c5, p5 = self.Down_block(p4, f[4])
+
+        bn = self.Bottleneck(p5, f[5])
+
+        u0 = self.Up_block(bn, c5, f[4])
+        u1 = self.Up_block(u0, c4, f[3])
+        u2 = self.Up_block(u1, c3, f[2])
+        u3 = self.Up_block(u2, c2, f[1])
+        u4 = self.Up_block(u3, c1, f[0])
+
+        outputs = keras.layers.Conv2D(1, (1, 1), padding='same', activation='sigmoid')(u4)
+        model = keras.models.Model(inputs, outputs)
+        return model
+    
+    def Model(self):
+        """
+        To have the same model function name for all models (easier to manipulate later on).
+        """
+        
+        return self.UNet()
+
+
+class UNetNDeepResidual:
+    """
+    Second model used. More complex than the first one as it also has deep residuals embedded inside it.
+    """
+
+    def __init__(self, image_size=512, kernel_size=(3, 3), padding='same', strides=1):
+        self.image_size = image_size
+        self.kernel_size = kernel_size
+        self.padding = padding
+        self.strides = strides
+        
+    def Bn_act(self, x, act=True):
+
+        x = keras.layers.BatchNormalization()(x)
+        if act:
+            x = keras.layers.Activation('relu')(x)
+        return x
+    
+    def Conv_block(self, x, filters, strides=1):
+        """
+        Creates the bridge between the downscaling and the upscaling.
+        """
+
+        conv = self.Bn_act(x)
+        conv = keras.layers.Conv2D(filters, self.kernel_size, padding=self.padding, strides=strides)(conv)
+        return conv
+    
+    def Stem(self, x, filters):
+
+        conv = keras.layers.Conv2D(filters, self.kernel_size, padding=self.padding, strides=self.strides)(x)
+        conv = self.Conv_block(conv, filters)
+
+        shortcut = keras.layers.Conv2D(filters, kernel_size=(1, 1), padding=self.padding, strides=self.strides)(x)
+        shortcut = self.Bn_act(shortcut, act=False)
+
+        output = keras.layers.Add()([conv, shortcut])
+        return output
+    
+    def Residual_block(self, x, filters, strides=1):
+
+        res = self.Conv_block(x, filters, strides=strides)
+        res = self.Conv_block(res, filters, strides=1)
+
+        shortcut = keras.layers.Conv2D(filters, kernel_size=(1, 1), padding=self.padding, strides=strides)(x)
+        shortcut = self.Bn_act(shortcut, act=False)
+
+        output = keras.layers.Add()([shortcut, res])
+        return output
+    
+    def Upsample_concat_block(self, x, xskip): 
+
+        u = keras.layers.UpSampling2D((2, 2))(x)
+        c = keras.layers.Concatenate()([u, xskip])
+        return c
+
+    def ResUNet(self):
+
+        f = [32, 64, 128, 256, 512, 1024]
+        inputs = keras.layers.Input((self.image_size, self.image_size, 2))
+
+        # Encoder
+        e0 = inputs
+        e1 = self.Stem(e0, f[0])
+        e2 = self.Residual_block(e1, f[1], strides=2)
+        e3 = self.Residual_block(e2, f[2], strides=2)
+        e4 = self.Residual_block(e3, f[3], strides=2)
+        e5 = self.Residual_block(e4, f[4], strides=2)
+        e6 = self.Residual_block(e5, f[5], strides=2)
+
+        # Bridge
+        b0 = self.Conv_block(e6, f[5])
+        b1 = self.Conv_block(b0, f[5])
+
+        # Decoder
+        u1 = self.Upsample_concat_block(b1, e5)
+        d1 = self.Residual_block(u1, f[5])
+
+        u2 = self.Upsample_concat_block(d1, e4)
+        d2 = self.Residual_block(u2, f[4])
+
+        u3 = self.Upsample_concat_block(d2, e3)
+        d3 = self.Residual_block(u3, f[3])
+
+        u4 = self.Upsample_concat_block(d3, e2)
+        d4 = self.Residual_block(u4, f[2])
+
+        u5 = self.Upsample_concat_block(d4, e1)
+        d5 = self.Residual_block(u5, f[1])
+
+        outputs = keras.layers.Conv2D(1, (1, 1), padding=self.padding, activation='sigmoid')(d5)
+        model = keras.models.Model(inputs, outputs)
+        return model
+    
+    def Model(self):
+        """
+        To have the same model function name for all models (easier to manipulate later on).
+        """
+
+        return self.ResUNet()
+    
+
+class UNetConvLSTM2D_long:
+    """
+    Created UNet architecture model using LSTM 2D convolutions for the downsampling, normal 2D convolutions
+    for the upsampling with skip connections using the downsampling LSTM 2D convolutions to try and better 
+    capture the local and global information. 
+    """
+
+    def __init__(self, sequence_len=8, image_size=512, kernel_size=(3, 3)):
+        # Arguments
+        self.sequence_len = sequence_len
+        self.image_size = image_size
+        self.kernel_size = kernel_size
+        
+    def Down_block(self, x, filters, padding='same', strides=1, first=False):
+        """
+        To downscale the input and use an increasing number of filters.
+        """
+
+        kwargs = {'padding':padding, 'strides':strides, 'activation':'relu', 'return_sequences': True}
+        if first:
+            c = keras.layers.ConvLSTM2D(filters, self.kernel_size, 
+                                        input_shape=(self.sequence_len, self.image_size, self.image_size, 3), **kwargs)(x)
+        else:
+            c = keras.layers.ConvLSTM2D(filters, self.kernel_size, **kwargs)(x)
+        c = keras.layers.ConvLSTM2D(filters, self.kernel_size, **kwargs)(c)
+        p = keras.layers.TimeDistributed(keras.layers.MaxPool2D((2, 2), (2 ,2)))(c)
+        return c, p
+
+    def Up_block(self, x, skip, filters, padding='same', strides=1):
+        """
+        To upscale the downscaled input.
+        """
+
+        kwargs = {'padding':padding, 'strides':strides, 'activation':'relu'}
+
+        us = keras.layers.UpSampling2D((2, 2))(x)
+        skip = keras.layers.Lambda(lambda x: x[:, -1, :, :, :])(skip)
+        concat = keras.layers.Concatenate()([us, skip])
+        c = keras.layers.Conv2D(filters, self.kernel_size, **kwargs)(concat)
+        c = keras.layers.Conv2D(filters, self.kernel_size, **kwargs)(c)
+        return c
+
+    def Bottleneck(self, x, filters, padding='same', strides=1):
+        """
+        Bridge between the downscaling and the upscaling.
+        """
+
+        kwargs = {'padding':padding, 'strides':strides, 'activation':'relu'}
+
+        c = keras.layers.ConvLSTM2D(filters, self.kernel_size, return_sequences=True, **kwargs)(x)
+        c = keras.layers.ConvLSTM2D(filters, self.kernel_size, return_sequences=False, **kwargs)(c)
+        return c
+
+    def UNet(self):
+        """
+        Main structure of the model putting the downscaling, the bridge and the upscaling together.
+        """
+
+        f = [32, 64, 128, 256, 512]
+        inputs = keras.layers.Input((self.sequence_len, self.image_size, self.image_size, 3))
+
+        p0 = inputs
+        c1, p1 = self.Down_block(p0, f[0], first=True)
+        c2, p2 = self.Down_block(p1, f[1])
+        c3, p3 = self.Down_block(p2, f[2])
+        c4, p4 = self.Down_block(p3, f[3])
+
+        bn = self.Bottleneck(p4, f[4])
+
+        u1 = self.Up_block(bn, c4, f[3])
+        u2 = self.Up_block(u1, c3, f[2])
+        u3 = self.Up_block(u2, c2, f[1])
+        u4 = self.Up_block(u3, c1, f[0])
+
+        outputs = keras.layers.Conv2D(1, (1, 1), padding='same', activation='sigmoid')(u4)
+        model = keras.models.Model(inputs, outputs)
+        return model
+    
+    def Model(self):
+        """
+        To have the same model function name for all models (easier to manipulate later on).
+        """
+        
+        return self.UNet()
+
+
+class UNetConvLSTM2D_short:
+    """
+    Created UNet architecture model using LSTM 2D convolutions for the downsampling, normal 2D convolutions
+    for the upsampling with skip connections using the downsampling LSTM 2D convolutions to try and better 
+    capture the local and global information. 
+    """
+
+    def __init__(self, sequence_len=8, image_size=512, kernel_size=(3, 3)):
+        # Arguments
+        self.sequence_len = sequence_len
+        self.image_size = image_size
+        self.kernel_size = kernel_size
+        
+    def Down_block(self, x, filters, padding='same', strides=1, first=False):
+        """
+        To downscale the input and use an increasing number of filters.
+        """
+
+        kwargs = {'padding':padding, 'strides':strides, 'activation':'relu', 'return_sequences': True}
+
+        if first:
+            c = keras.layers.ConvLSTM2D(filters, self.kernel_size, 
+                                        input_shape=(self.sequence_len, self.image_size, self.image_size, 3), **kwargs)(x)
+        else:
+            c = keras.layers.ConvLSTM2D(filters, self.kernel_size, **kwargs)(x)
+
+        p = keras.layers.TimeDistributed(keras.layers.MaxPool2D((2, 2), (2 ,2)))(c)
+        return c, p
+
+    def Up_block(self, x, skip, filters, padding='same', strides=1):
+        """
+        To upscale the downscaled input.
+        """
+
+        kwargs = {'padding':padding, 'strides':strides, 'activation':'relu'}
+
+        us = keras.layers.UpSampling2D((2, 2))(x)
+        skip = keras.layers.Lambda(lambda x: x[:, -1, :, :, :])(skip)
+        concat = keras.layers.Concatenate()([us, skip])
+        c = keras.layers.Conv2D(filters, self.kernel_size, **kwargs)(concat)
+        return c
+
+    def Bottleneck(self, x, filters, padding='same', strides=1):
+        """
+        Bridge between the downscaling and the upscaling.
+        """
+        kwargs = {'padding':padding, 'strides':strides, 'activation':'relu'}
+
+        c = keras.layers.ConvLSTM2D(filters, self.kernel_size, return_sequences=False, **kwargs)(x)
+        return c
+
+    def UNet(self):
+        """
+        Main structure of the model putting the downscaling, the bridge and the upscaling together.
+        """
+
+        f = [64, 128, 256, 512, 1024, 2048]
+        inputs = keras.layers.Input((self.sequence_len, self.image_size, self.image_size, 3))
+
+        p0 = inputs
+        c1, p1 = self.Down_block(p0, f[0], first=True)
+        c2, p2 = self.Down_block(p1, f[1])
+        c3, p3 = self.Down_block(p2, f[2])
+        c4, p4 = self.Down_block(p3, f[3])
+        c5, p5 = self.Down_block(p4, f[4])
+
+        bn = self.Bottleneck(p5, f[5])
+
+        u0 = self.Up_block(bn, c5, f[4])
+        u1 = self.Up_block(u0, c4, f[3])
+        u2 = self.Up_block(u1, c3, f[2])
+        u3 = self.Up_block(u2, c2, f[1])
+        u4 = self.Up_block(u3, c1, f[0])
+
+        outputs = keras.layers.Conv2D(1, (1, 1), padding='same', activation='sigmoid')(u4)
+        model = keras.models.Model(inputs, outputs)
+        return model
+    
+    def Model(self):
+        """
+        To have the same model function name for all models (easier to manipulate later on).
+        """
+        
+        return self.UNet()
