@@ -159,7 +159,7 @@ class DataGen_ordered:
         self.Paths()
         self.Separated_paths()
         self.Sliding_window_paths()
-        self.Initial_manipulation()
+        # self.Initial_manipulation()
 
     def Paths(self):
         """
@@ -240,8 +240,8 @@ class DataGen_ordered:
         image = tf.image.resize(image, [self.image_size, self.image_size])
         image = tf.cast(image, tf.float32) / 255
         image = np.array(image)
-        image = np.abs(image - 1)  # so that what we need to find (initially it was black so 0) becomes 1. 
-        image[self.initial_filter] = self.mask_val
+        # image = np.abs(image - 1)  # so that what we need to find (initially it was black so 0) becomes 1. 
+        # image[self.initial_filter] = self.mask_val
         return np.array(image)
 
     def Load_outputs(self, path):
@@ -256,7 +256,7 @@ class DataGen_ordered:
         mask = tf.cast(mask, tf.float32) / 255
         mask = np.array(mask)
         mask[mask < 1] = 0
-        mask[self.initial_filter] = 0
+        # mask[self.initial_filter] = 0
         return mask
 
     def Data_augmentation(self, input_data, dimensions):
