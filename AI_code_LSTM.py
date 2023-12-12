@@ -100,7 +100,7 @@ class Controller:
         # Attributes
         self.path = os.path.join(os.getcwd(), self.model_class.__name__, f'seq_len{self.sequence_len}', 'firstlayer64',
                                  f'kernel{self.kernel_size[0]}_{self.kernel_size[1]}', 
-                                 f'Epochs{self.epochs}')
+                                 f'Epochs{self.epochs}', 'no_init_mask')
         os.makedirs(self.path, exist_ok=True)
 
         # Functions
@@ -156,7 +156,7 @@ if __name__ == '__main__':
 
     # Running the code for different models
     kernel_sizes = [(3, 3), (5, 5), (7, 7), (9, 9)]
-    epochs_list = [1, 10, 50, 100, 200, 300]
+    epochs_list = [1, 5, 10, 25, 50, 100, 200]
     models_list = [UNetConvLSTM2D_long]
 
     ModelRunner(ModelClassList=models_list, kernel_sizes=kernel_sizes, epochs_list=epochs_list)

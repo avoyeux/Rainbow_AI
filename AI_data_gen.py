@@ -23,7 +23,7 @@ class DataGen:
 
         # Arguments
         self.Paths()
-        self.Initial_manipulation()
+        # self.Initial_manipulation()
         self.on_epoch_end()
 
     def Paths(self):
@@ -70,7 +70,7 @@ class DataGen:
         image = tf.image.resize(image, [self.image_size, self.image_size])
         image = tf.cast(image, tf.float32) / 255
         image = np.array(image)
-        image[self.initial_filter] = self.mask_val
+        # image[self.initial_filter] = self.mask_val
         return np.array(image)
 
     def Load_outputs(self, path):
@@ -85,7 +85,7 @@ class DataGen:
         mask = tf.cast(mask, tf.float32) / 255
         mask = np.array(mask)
         mask[mask < 1] = 0
-        mask[self.initial_filter] = 0
+        # mask[self.initial_filter] = 0
         return mask
 
     def Data_augmentation(self, input_data):
