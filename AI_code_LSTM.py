@@ -157,7 +157,7 @@ if __name__ == '__main__':
     # Running the code for different models
     kernel_sizes = [(3, 3), (5, 5), (7, 7), (9, 9)]
     epochs_list = [1, 5, 10, 25, 50, 100, 200]
-    models_list = [UNetConvLSTM2D_long]
+    models_list = [UNetConvLSTM2D_short]
 
     ModelRunner(ModelClassList=models_list, kernel_sizes=kernel_sizes, epochs_list=epochs_list)
 
