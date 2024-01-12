@@ -1,5 +1,7 @@
 """
-To run the different models on the data.
+Main structure of the AI testing.
+It imports the different created models, the data generator and the plotting function to save the results, the model and the weights
+corresponding to each test.
 """
 
 import os
@@ -14,13 +16,15 @@ from AI_models import UNetConvLSTM2D_long, UNetConvLSTM2D_short
 
 import tensorflow as tf
 
+# Parallelism tests to try and not use all the cpu cores. It failed though, but keeping it for later tries
 nb_cpus = 92
 tf.config.threading.set_intra_op_parallelism_threads(nb_cpus)
 tf.config.threading.set_inter_op_parallelism_threads(nb_cpus)
 
 class ModelRunner:
     """
-    Creates the data and runs the code for all the models. It is the main class.
+    The class that encompasses everything.
+    Uses a list of model classes as inputs to run them given a list of arguments. Also runs the data generator class. 
     """
 
     def __init__(self, ModelClassList: list, epochs_list: list = [200], kernel_sizes: list = [(3, 3)], image_size: int = 512, sequence_len: int = 8,
@@ -49,7 +53,7 @@ class ModelRunner:
     
     def Running(self):
         """
-        Running the code given the different arguments. Here you can choose which model to compute
+        Running the code given the different arguments.
         """
 
         kwargs = {'train_images': self.train_inputs, 'train_masks': self.train_outputs, 
@@ -68,7 +72,7 @@ class ModelRunner:
 @decorators.running_time
 class Controller:
     """
-    To compile, save and visualise the tests of a given model.
+    To compile, save and visualise the tests for a given model as input.
     """
 
     def __init__(self, model_class, train_images, train_masks, test_images, test_masks, sequence_len=8, batch_size=5,

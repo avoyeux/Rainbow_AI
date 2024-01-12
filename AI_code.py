@@ -1,17 +1,18 @@
 """
+Main code.
 To run the different models on the data.
 """
 
 import os
 import gc
 
+import tensorflow as tf
+
 # Python codes imports
 from AI_data_gen import DataGen
 from AI_plotting import Plotter
 from common_alf import decorators
 from AI_models import UNetModel, UNetNDeepResidual
-
-import tensorflow as tf
 
 nb_cpus = 64
 tf.config.threading.set_intra_op_parallelism_threads(nb_cpus)

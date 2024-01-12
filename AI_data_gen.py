@@ -1,8 +1,10 @@
 """
-Where the data is first manipulated to then be used when fitting the deep learning models.
+Where the data is preprocessed to then be used when fitting the deep learning models.
 """
 
+# Imports
 import os
+
 import numpy as np
 import tensorflow as tf
 
@@ -23,7 +25,6 @@ class DataGen:
 
         # Arguments
         self.Paths()
-        # self.Initial_manipulation()
         self.on_epoch_end()
 
     def Paths(self):
@@ -38,7 +39,7 @@ class DataGen:
                       'Inputs2': os.path.join(main_path, 'Inputs2'),
                       'Masks': os.path.join(main_path, 'New_masks'),}
 
-        self.input_paths = sorted(Path(self.paths['Inputs']).glob('*.png'))
+        self.input_paths = sorted(Path(self.paths['Inputs']).glob('*.png')) 
         self.input_paths2 = sorted(Path(self.paths['Inputs2']).glob('*.png'))
         self.output_paths = sorted(Path(self.paths['Masks']).glob('*.png'))
 
@@ -46,18 +47,6 @@ class DataGen:
         self.input_paths = [str(path) for path in self.input_paths]
         self.input_paths2 = [str(path) for path in self.input_paths2]
         self.output_paths = [str(path) for path in self.output_paths]
-
-    def Initial_manipulation(self):
-        """
-        Adding an initial mask representing the general position of the output mask
-        """
-
-        image = tf.io.read_file(os.path.join(self.paths['Main'], 'masks_sum_colors.png'))
-        image = tf.image.decode_png(image, channels=3)
-        image = tf.image.resize(image, [self.image_size, self.image_size])
-
-        target_color = np.array([38, 255, 255])
-        self.initial_filter = np.all(image == target_color, axis=-1)
 
     def Load_inputs(self, path):
         """
@@ -69,8 +58,6 @@ class DataGen:
         image = tf.image.rgb_to_grayscale(image)
         image = tf.image.resize(image, [self.image_size, self.image_size])
         image = tf.cast(image, tf.float32) / 255
-        image = np.array(image)
-        # image[self.initial_filter] = self.mask_val
         return np.array(image)
 
     def Load_outputs(self, path):
@@ -85,7 +72,6 @@ class DataGen:
         mask = tf.cast(mask, tf.float32) / 255
         mask = np.array(mask)
         mask[mask < 1] = 0
-        # mask[self.initial_filter] = 0
         return mask
 
     def Data_augmentation(self, input_data):
@@ -137,10 +123,13 @@ class DataGen:
             test_masks.append(_mask)
         test_images = np.array(test_images)
         test_masks = np.array(test_masks)
-
         return train_images, train_masks, test_images, test_masks
 
     def on_epoch_end(self):
+        """
+        No clue what this does but in the video I was looking at for Unet architectures, this was done. 
+        """
+
         pass
 
 
@@ -159,7 +148,6 @@ class DataGen_ordered:
         self.Paths()
         self.Separated_paths()
         self.Sliding_window_paths()
-        # self.Initial_manipulation()
 
     def Paths(self):
         """
@@ -185,6 +173,7 @@ class DataGen_ordered:
     def Separated_paths(self):
         """
         To separate the paths in sections with images that follow each other to then be able to use it in an LSTM model.
+        This is only done as my initial set of images is made up of 3 different sections and is not continuous.
         """
 
         paths_sections = []
@@ -217,17 +206,6 @@ class DataGen_ordered:
         
         self.sliding_sequences = np.array(sliding_sequences)
                 
-    def Initial_manipulation(self):
-        """
-        Adding an initial mask representing the general position of the output mask.
-        """
-
-        image = tf.io.read_file(os.path.join(self.paths['Main'], 'masks_sum_colors.png'))
-        image = tf.image.decode_png(image, channels=3)
-        image = tf.image.resize(image, [self.image_size, self.image_size])
-
-        target_color = np.array([38, 255, 255])
-        self.initial_filter = np.all(image == target_color, axis=-1)
 
     def Load_inputs(self, path):
         """
@@ -239,9 +217,6 @@ class DataGen_ordered:
         image = tf.image.rgb_to_grayscale(image)
         image = tf.image.resize(image, [self.image_size, self.image_size])
         image = tf.cast(image, tf.float32) / 255
-        image = np.array(image)
-        # image = np.abs(image - 1)  # so that what we need to find (initially it was black so 0) becomes 1. 
-        # image[self.initial_filter] = self.mask_val
         return np.array(image)
 
     def Load_outputs(self, path):
@@ -256,7 +231,6 @@ class DataGen_ordered:
         mask = tf.cast(mask, tf.float32) / 255
         mask = np.array(mask)
         mask[mask < 1] = 0
-        # mask[self.initial_filter] = 0
         return mask
 
     def Data_augmentation(self, input_data, dimensions):
@@ -273,7 +247,7 @@ class DataGen_ordered:
     
     def Test_data(self):
         """
-        To define the test set to check if it is working.
+        To define the test set.
         """
 
         indexes = [20, 51, 77]
@@ -292,7 +266,6 @@ class DataGen_ordered:
             test_output.append(mask)
             test_sequence[-1, :, :, -1] = np.zeros((self.image_size, self.image_size), dtype='float32')
             test_input.append(test_sequence)
-
         return np.array(test_input), np.array(test_output)
         
     def Give_data(self):
@@ -330,7 +303,6 @@ class DataGen_ordered:
 
         train_inputs, train_outputs = shuffle(train_inputs, train_outputs)
         test_input, test_output = self.Test_data()
-
         return train_inputs, train_outputs, test_input, test_output
 
 
@@ -346,7 +318,6 @@ if __name__=='__main__':
     test_input0 = test_input[0]
     print(f'test input0 shape is {test_input0.shape}')
     
-
     import matplotlib.pyplot as plt
 
     plt.figure()

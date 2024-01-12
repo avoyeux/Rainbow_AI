@@ -1,23 +1,28 @@
 """
-All the different models used in the deep learning test.
+All the different models used in the deep learning tests.
 """
 
+# Imports
 from tensorflow import keras
 
 
 class UNetModel:
     """
     First model and simplest model used.
+    As the name implies, is follows a UNet architecture by doing convolutions, setting a number of filters for each convolutions and
+    then downsampling and increasing the number of filters for the downsampled result. 
     """
 
-    def __init__(self, image_size=512, kernel_size=(3, 3)):
+    def __init__(self, image_size: int = 512, kernel_size: tuple = (3, 3)):
+
         # Arguments
         self.image_size = image_size
         self.kernel_size = kernel_size
         
     def Down_block(self, x, filters, padding='same', strides=1):
         """
-        To downscale the input.
+        Down sampling block.
+        Double convolution with a certain number of filters. The final result is then downsampled with a stride of 2.
         """
 
         c = keras.layers.Conv2D(filters, self.kernel_size, padding=padding, strides=strides, activation='relu')(x)
@@ -27,7 +32,8 @@ class UNetModel:
 
     def Up_block(self, x, skip, filters, padding='same', strides=1):
         """
-        To upscale the downscaled input.
+        Up sampling block.
+        Upscales the input and does a double convolution, given a certain number of filters, on the result.
         """
 
         us = keras.layers.UpSampling2D((2, 2))(x)
@@ -47,11 +53,12 @@ class UNetModel:
 
     def UNet(self):
         """
-        Main structure  of the UNet model putting the downscaling, the bridge and the upscaling together.
+        Main structure of the UNet model putting the downscaling, the bridge and the upscaling together.
+        A small number of filters are used on the initial image and that number increases while we downsample the image.
         """
 
-        f = [32, 64, 128, 256, 512, 1024]
-        inputs = keras.layers.Input((self.image_size, self.image_size, 2))
+        f = [32, 64, 128, 256, 512, 1024]  # number of filters used.
+        inputs = keras.layers.Input((self.image_size, self.image_size, 2))  # represents the input shape 
 
         p0 = inputs
         c1, p1 = self.Down_block(p0, f[0])
@@ -68,7 +75,7 @@ class UNetModel:
         u3 = self.Up_block(u2, c2, f[1])
         u4 = self.Up_block(u3, c1, f[0])
 
-        outputs = keras.layers.Conv2D(1, (1, 1), padding='same', activation='sigmoid')(u4)
+        outputs = keras.layers.Conv2D(1, (1, 1), padding='same', activation='sigmoid')(u4) #sigmoid as the output is a mask, i.e. 1 or 0
         model = keras.models.Model(inputs, outputs)
         return model
     
@@ -82,16 +89,22 @@ class UNetModel:
 
 class UNetNDeepResidual:
     """
-    Second model used. More complex than the first one as it also has deep residuals embedded inside it.
+    Second model used. It is supposed to be an "improved" version of the usual UNet model as deep residuals are also added in.
+    That being said, in my case, when I was looking at the test results, I wasn't able to see any improvements. In some cases, the 
+    results even seemed a little worse. Still, given the examples I had seen on internet, this method clearly has it's uses. 
     """
 
-    def __init__(self, image_size=512, kernel_size=(3, 3), padding='same', strides=1):
+    def __init__(self, image_size: int = 512, kernel_size: tuple = (3, 3), padding: str = 'same', strides: int = 1):
+
         self.image_size = image_size
         self.kernel_size = kernel_size
         self.padding = padding
         self.strides = strides
         
     def Bn_act(self, x, act=True):
+        """
+        Honestly, re-reading the code, I don't remember what this function actually does...
+        """
 
         x = keras.layers.BatchNormalization()(x)
         if act:
@@ -100,7 +113,7 @@ class UNetNDeepResidual:
     
     def Conv_block(self, x, filters, strides=1):
         """
-        Creates the bridge between the downscaling and the upscaling.
+        Does a convolution and the bridge.
         """
 
         conv = self.Bn_act(x)
@@ -108,6 +121,9 @@ class UNetNDeepResidual:
         return conv
     
     def Stem(self, x, filters):
+        """
+        Creates the initial convolution and the shortcut.
+        """
 
         conv = keras.layers.Conv2D(filters, self.kernel_size, padding=self.padding, strides=self.strides)(x)
         conv = self.Conv_block(conv, filters)
@@ -137,8 +153,8 @@ class UNetNDeepResidual:
 
     def ResUNet(self):
 
-        f = [32, 64, 128, 256, 512, 1024]
-        inputs = keras.layers.Input((self.image_size, self.image_size, 2))
+        f = [32, 64, 128, 256, 512, 1024]  # number of filters
+        inputs = keras.layers.Input((self.image_size, self.image_size, 2))  # represents the input shape 
 
         # Encoder
         e0 = inputs
@@ -183,12 +199,15 @@ class UNetNDeepResidual:
 
 class UNetConvLSTM2D_long:
     """
-    Created UNet architecture model using LSTM 2D convolutions for the downsampling, normal 2D convolutions
+    UNet architecture model using LSTM 2D convolutions for the downsampling, normal 2D convolutions
     for the upsampling with skip connections using the downsampling LSTM 2D convolutions to try and better 
     capture the local and global information. 
+    The downscaling tries to capture the temporal evolution while the upscaling tries to capture the individual properties for
+    the last image for which a mask is needed.
     """
 
-    def __init__(self, sequence_len=8, image_size=512, kernel_size=(3, 3)):
+    def __init__(self, sequence_len: int = 8, image_size: int = 512, kernel_size: tuple = (3, 3)):
+
         # Arguments
         self.sequence_len = sequence_len
         self.image_size = image_size
@@ -239,8 +258,8 @@ class UNetConvLSTM2D_long:
         Main structure of the model putting the downscaling, the bridge and the upscaling together.
         """
 
-        f = [32, 64, 128, 256, 512]
-        inputs = keras.layers.Input((self.sequence_len, self.image_size, self.image_size, 3))
+        f = [32, 64, 128, 256, 512]  # number of filters
+        inputs = keras.layers.Input((self.sequence_len, self.image_size, self.image_size, 3))  # represents the input shape 
 
         p0 = inputs
         c1, p1 = self.Down_block(p0, f[0], first=True)
@@ -272,9 +291,11 @@ class UNetConvLSTM2D_short:
     Created UNet architecture model using LSTM 2D convolutions for the downsampling, normal 2D convolutions
     for the upsampling with skip connections using the downsampling LSTM 2D convolutions to try and better 
     capture the local and global information. 
+    The difference with UNetConvLSTM2D_long is that only one LSTMconv is done per downscaling and one 2Dconv per upscaling.
     """
 
-    def __init__(self, sequence_len=8, image_size=512, kernel_size=(3, 3)):
+    def __init__(self, sequence_len: int = 8, image_size: int = 512, kernel_size: tuple = (3, 3)):
+
         # Arguments
         self.sequence_len = sequence_len
         self.image_size = image_size
@@ -313,6 +334,7 @@ class UNetConvLSTM2D_short:
         """
         Bridge between the downscaling and the upscaling.
         """
+        
         kwargs = {'padding':padding, 'strides':strides, 'activation':'relu'}
 
         c = keras.layers.ConvLSTM2D(filters, self.kernel_size, return_sequences=False, **kwargs)(x)
