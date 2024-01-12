@@ -23,8 +23,8 @@ class ModelRunner:
     Creates the data and runs the code for all the models. It is the main class.
     """
 
-    def __init__(self, ModelClassList, epochs_list=[200], kernel_sizes=[(3, 3)], image_size=512, sequence_len=8,
-                  mask_val=0):
+    def __init__(self, ModelClassList: list, epochs_list: list = [200], kernel_sizes: list = [(3, 3)], image_size: int = 512, sequence_len: int = 8,
+                  mask_val: int = 0):
         # Arguments
         self.ModelClassList = ModelClassList
         self.epochs_list = epochs_list
@@ -41,6 +41,7 @@ class ModelRunner:
         """
         Generating the training and test data sets.
         """
+        
         kwargs = {'image_size': self.image_size, 'mask_val': self.mask_val, 'sequence_len': self.sequence_len}
 
         data = DataGen_ordered(**kwargs)
@@ -126,6 +127,7 @@ class Controller:
         """
         Uses the Plotter class to plot the testing set and the corresponding model prediction.
         """
+
         test_image = tf.expand_dims(self.test_images[0], axis=0)
         result0 = self.model.predict(test_image)
         mask_result0 = result0 > self.result_cap

@@ -11,7 +11,7 @@ class decorators:
     """
     To store decorators that I use.
     """
-
+    
     @staticmethod
     def running_time(func):
         """
