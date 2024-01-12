@@ -32,7 +32,7 @@ class DataGen:
         Creating the paths dictionary.
         """
         
-        main_path = '../'
+        main_path = os.getcwd()
 
         self.paths = {'Main': main_path,
                       'Inputs': os.path.join(main_path, 'Inputs'),
@@ -154,7 +154,7 @@ class DataGen_ordered:
         Creating the paths dictionary.
         """
         
-        main_path = '../'
+        main_path = os.getcwd()
 
         self.paths = {'Main': main_path,
                       'Inputs': os.path.join(main_path, 'Inputs'),
