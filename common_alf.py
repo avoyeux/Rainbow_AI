@@ -37,7 +37,7 @@ class PlotFunctions:
     """
 
     @staticmethod
-    def Contours(mask):
+    def Contours(mask: np.ndarray):
         """
         To plot the contours given a mask
         Source: https://stackoverflow.com/questions/40892203/can-matplotlib-contours-match-pixel-edges

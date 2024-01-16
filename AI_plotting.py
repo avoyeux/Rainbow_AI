@@ -13,7 +13,8 @@ class Plotter:
     Plots the test and prediction for the test given the corresponding data and path.
     """
 
-    def __init__(self, path, test_images, test_masks, predicted_masks, image_size=512):
+    def __init__(self, path : str, test_images: np.ndarray, test_masks: np.ndarray, predicted_masks: np.ndarray, image_size: int = 512):
+
         # Arguments
         self.path = path
         self.test_images = test_images
@@ -78,7 +79,8 @@ class Plotter_LSTM:
     Plots the test and prediction for the LSTM test given the corresponding data and path.
     """
 
-    def __init__(self, path, test_images, test_masks, predicted_masks, image_size=512):
+    def __init__(self, path: str, test_images: np.ndarray, test_masks: np.ndarray, predicted_masks: np.array, image_size: int = 512):
+        
         # Arguments
         self.path = path
         self.test_images = test_images

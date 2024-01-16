@@ -16,8 +16,8 @@ class UNetModel:
     def __init__(self, image_size: int = 512, kernel_size: tuple = (3, 3)):
 
         # Arguments
-        self.image_size = image_size
-        self.kernel_size = kernel_size
+        self.image_size = image_size  # pixel length of the post processed square images
+        self.kernel_size = kernel_size  # tuple representing the kernel size to be tested
         
     def Down_block(self, x, filters, padding='same', strides=1):
         """
@@ -54,7 +54,8 @@ class UNetModel:
     def UNet(self):
         """
         Main structure of the UNet model putting the downscaling, the bridge and the upscaling together.
-        A small number of filters are used on the initial image and that number increases while we downsample the image.
+        A small number of filters are used on the initial image and that number decreases while we downsample the image
+        and increases when we upsample the result.
         """
 
         f = [32, 64, 128, 256, 512, 1024]  # number of filters used.
@@ -96,14 +97,19 @@ class UNetNDeepResidual:
 
     def __init__(self, image_size: int = 512, kernel_size: tuple = (3, 3), padding: str = 'same', strides: int = 1):
 
-        self.image_size = image_size
-        self.kernel_size = kernel_size
-        self.padding = padding
-        self.strides = strides
+        self.image_size = image_size  # pixel length of the post processed square images
+        self.kernel_size = kernel_size  # tuple representing the kernel size to be tested
+        self.padding = padding  # string that can be 'same' and 'valid'
+        self.strides = strides  # the stride used, i.e. 1 is every pixel and 2 would create and output 2 times smaller for 1D. 
         
     def Bn_act(self, x, act=True):
         """
         Honestly, re-reading the code, I don't remember what this function actually does...
+        From keras documentation, we get that:
+        Batch normalization applies a transformation that maintains the mean output close to 0 and the output standard deviation close to 1.
+        The layer will only normalize its inputs during inference after having been trained on data that has similar statistics 
+        as the inference data.
+        Furthermore, the activation layer just activates the 'relu' on the given layer used to introduce non-linearities into the network. 
         """
 
         x = keras.layers.BatchNormalization()(x)
@@ -135,6 +141,9 @@ class UNetNDeepResidual:
         return output
     
     def Residual_block(self, x, filters, strides=1):
+        """
+        Used in the downsampling (strides=2) and upsampling(strides=1). Does the convolutions and uses the batch normalisation.
+        """
 
         res = self.Conv_block(x, filters, strides=strides)
         res = self.Conv_block(res, filters, strides=1)
@@ -146,12 +155,20 @@ class UNetNDeepResidual:
         return output
     
     def Upsample_concat_block(self, x, xskip): 
+        """
+        The upsampling making the input 4 times bigger and using skip connections.
+        """
 
         u = keras.layers.UpSampling2D((2, 2))(x)
         c = keras.layers.Concatenate()([u, xskip])
         return c
 
     def ResUNet(self):
+        """
+        Main structure of the deep residual UNet model putting the downscaling, the bridge and the upscaling together.
+        A small number of filters are used on the initial image and that number decreases while we downsample the image
+        and increases when we upsample the result.
+        """
 
         f = [32, 64, 128, 256, 512, 1024]  # number of filters
         inputs = keras.layers.Input((self.image_size, self.image_size, 2))  # represents the input shape 
@@ -210,8 +227,8 @@ class UNetConvLSTM2D_long:
 
         # Arguments
         self.sequence_len = sequence_len
-        self.image_size = image_size
-        self.kernel_size = kernel_size
+        self.image_size = image_size  # pixel length of the post processed square images
+        self.kernel_size = kernel_size  # tuple representing the kernel size to be tested
         
     def Down_block(self, x, filters, padding='same', strides=1, first=False):
         """
@@ -297,9 +314,9 @@ class UNetConvLSTM2D_short:
     def __init__(self, sequence_len: int = 8, image_size: int = 512, kernel_size: tuple = (3, 3)):
 
         # Arguments
-        self.sequence_len = sequence_len
-        self.image_size = image_size
-        self.kernel_size = kernel_size
+        self.sequence_len = sequence_len  # number of images used for each sequences (i.e. the time dependence length)
+        self.image_size = image_size  # pixel length of the post processed square images
+        self.kernel_size = kernel_size  # tuple representing the kernel size to be tested
         
     def Down_block(self, x, filters, padding='same', strides=1, first=False):
         """

@@ -1,5 +1,6 @@
 """
 Where the data is preprocessed to then be used when fitting the deep learning models.
+There are two different classes as one is not ordered (for non RNN like models), the second is for an ordered set (RNN like models). 
 """
 
 # Imports
@@ -11,19 +12,25 @@ import tensorflow as tf
 from pathlib import Path
 from sklearn.utils import shuffle
 
+
 class DataGen:
     """
     To find the data and create the training inputs and outputs and the test set for the deep learning.
     """
 
-    def __init__(self, image_size=512, mask_val=0, test_length=4, augmentation=True):
-        # Inputs
-        self.image_size = image_size
-        self.mask_val = mask_val
-        self.test_length = int(test_length)
-        self.augmentation = augmentation
+    def __init__(self, image_size: int = 512, test_length: int = 4, augmentation: bool = True):
 
-        # Arguments
+        # Inputs
+        self.image_size = image_size  # the final square image size in pixels (the initial image is resized to this value)
+        self.test_length = test_length  # the number of test images wanted
+        self.augmentation = augmentation  # bool to set the augmentation (i.e. rotating and flipping the images)
+
+        # Created attributes
+        self.input_paths = None  # sorted list of filepath strings for the average (treated) STEREO images
+        self.input_paths2 = None  # same for the non treated intensity STEREO images
+        self.output_paths = None  # same for the corresponding masks
+
+        # Functions
         self.Paths()
         self.on_epoch_end()
 
@@ -34,14 +41,14 @@ class DataGen:
         
         main_path = os.getcwd()
 
-        self.paths = {'Main': main_path,
-                      'Inputs': os.path.join(main_path, 'Inputs'),
-                      'Inputs2': os.path.join(main_path, 'Inputs2'),
-                      'Masks': os.path.join(main_path, 'New_masks'),}
+        paths = {'Main': main_path,
+                 'Inputs': os.path.join(main_path, 'Inputs'),
+                 'Inputs2': os.path.join(main_path, 'Inputs2'),
+                 'Masks': os.path.join(main_path, 'New_masks')}
 
-        self.input_paths = sorted(Path(self.paths['Inputs']).glob('*.png')) 
-        self.input_paths2 = sorted(Path(self.paths['Inputs2']).glob('*.png'))
-        self.output_paths = sorted(Path(self.paths['Masks']).glob('*.png'))
+        self.input_paths = sorted(Path(paths['Inputs']).glob('*.png')) 
+        self.input_paths2 = sorted(Path(paths['Inputs2']).glob('*.png'))
+        self.output_paths = sorted(Path(paths['Masks']).glob('*.png'))
 
         # Tensorflow doesn't like pathlib so there you go
         self.input_paths = [str(path) for path in self.input_paths]
@@ -62,7 +69,7 @@ class DataGen:
 
     def Load_outputs(self, path):
         """
-        Loading and initial manipulation on the ouputs, i.e. masks.
+        Loading and initial manipulation on the outputs, i.e. masks.
         """
 
         mask = tf.io.read_file(path)
@@ -128,6 +135,7 @@ class DataGen:
     def on_epoch_end(self):
         """
         No clue what this does but in the video I was looking at for Unet architectures, this was done. 
+        Should be useless as my way of doing things is a little different but it's here for safe keeping.
         """
 
         pass
@@ -138,13 +146,20 @@ class DataGen_ordered:
     To find the data and create the training inputs and outputs and the test set for the deep learning.
     """
 
-    def __init__(self, image_size=512, mask_val=0, sequence_len=8):
-        # Inputs
-        self.image_size = image_size
-        self.mask_val = mask_val
-        self.sequence_len = sequence_len
+    def __init__(self, image_size: int = 512, sequence_len: int = 8):
 
-        # Arguments
+        # Inputs
+        self.image_size = image_size  # the final square image size in pixels (the initial image is resized to this value)
+        self.sequence_len = sequence_len  # number of images used for each sequences (i.e. the time dependence length)
+
+        # Created attributes
+        self.input_paths = None  # sorted list of filepath strings for the average (treated) STEREO images
+        self.input_paths2 = None  # same for the non treated intensity STEREO images
+        self.output_paths = None  # same for the corresponding masks
+        self.paths_sections = None  # inhomogeneous list with "shape" (3, nb_of_training_images, 3) with the filepath string for each index of the three above attributes
+        self.sliding_sequences = None  # array with shape (nb_of_training_images, sequence_length, 3) with the filepath strings
+
+        # Functions
         self.Paths()
         self.Separated_paths()
         self.Sliding_window_paths()
@@ -156,14 +171,14 @@ class DataGen_ordered:
         
         main_path = os.getcwd()
 
-        self.paths = {'Main': main_path,
+        paths = {'Main': main_path,
                       'Inputs': os.path.join(main_path, 'Inputs'),
                       'Inputs2': os.path.join(main_path, 'Inputs2'),
                       'Masks': os.path.join(main_path, 'New_masks')}
 
-        self.input_paths = sorted(Path(self.paths['Inputs']).glob('*.png'))
-        self.input_paths2 = sorted(Path(self.paths['Inputs2']).glob('*.png'))
-        self.output_paths = sorted(Path(self.paths['Masks']).glob('*.png'))
+        self.input_paths = sorted(Path(paths['Inputs']).glob('*.png'))
+        self.input_paths2 = sorted(Path(paths['Inputs2']).glob('*.png'))
+        self.output_paths = sorted(Path(paths['Masks']).glob('*.png'))
 
         # Tensorflow doesn't like pathlib so there you go
         self.input_paths = [str(path) for path in self.input_paths]
@@ -205,7 +220,6 @@ class DataGen_ordered:
                 sliding_sequences.append(slide)
         
         self.sliding_sequences = np.array(sliding_sequences)
-                
 
     def Load_inputs(self, path):
         """
@@ -270,7 +284,7 @@ class DataGen_ordered:
         
     def Give_data(self):
         """
-        Creates the train sets for a sequential method (like LSTM).
+        Creates the training sets for a sequential method (like LSTM).
         """
 
         train_inputs = []
@@ -307,22 +321,7 @@ class DataGen_ordered:
 
 
 if __name__=='__main__':
+
     test = DataGen_ordered()
     train_inputs, train_outputs, test_input, test_output = test.Give_data()
-    print(f'train input shape is {train_inputs.shape} with size {train_inputs.nbytes / 1024**2}MB')
-    print(f"if float16 then {(train_inputs.astype('float16').nbytes)}")
-    print(f'train output shape is {train_outputs.shape} with size {train_outputs.nbytes / 1024**2}MB')
-    print(f'test input shape is {test_input.shape} with size {test_input.nbytes / 1024**2}MB')
-    print(f'test output shape is {test_output.shape}with size {test_output.nbytes / 1024**2}MB')
-
-    test_input0 = test_input[0]
-    print(f'test input0 shape is {test_input0.shape}')
     
-    import matplotlib.pyplot as plt
-
-    plt.figure()
-    plt.imshow(test_output[0], interpolation='none')
-    plt.colorbar()
-    plt.savefig(os.path.join(os.getcwd(), f'FUCK1.png'), dpi=300)
-    plt.close()
-    print(f'test_output0.shape is {test_output[0].shape}')

@@ -1,12 +1,5 @@
-Unet_kfold*
-UNet*
-archive/
-Inputs*
-New_masks
-batch_job.sh
-slurm*
-AI_testing_kfold*
-unet_n_residual*
-AI_opening_models*
-__pycache__
-.venv
+*
+!*.py
+!README.md
+!requirements.txt
+!still_in_testing_mode/

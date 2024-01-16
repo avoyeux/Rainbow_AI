@@ -2,7 +2,7 @@
 
 ### Summary of the README:
 
-- 1 - The github repo: explanation of the uses of the different Python codes in the repository
+- 1 - The github repo: explanation of the uses of the different Python codes in the repository.
 
 - 2 - Malpractices: explanation of the main unethical decisions I have made.
 
@@ -21,7 +21,7 @@
 
 - `AI_plotting.py`: Python file where the plotting class is stored to then plot the testing set results.
 
-- `common_alf.py`: Python file where some usual functions that I regularly use are stored. As of now, it is still pretty empty, i.e. still a work in progress. 
+- `common_alf.py`: Python file where some usual functions, that I regularly, use are stored. As of now, it is still pretty empty, i.e. still a work in progress. 
 
 - `requirements.txt`: Text file with all the dependencies needed to run the code.
 

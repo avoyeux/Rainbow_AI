@@ -1,25 +1,27 @@
 """
-Main structure of the AI testing.
+Main structure of the AI testing of the RNN (here LSTM) models.
 It imports the different created models, the data generator and the plotting function to save the results, the model and the weights
 corresponding to each test.
 """
 
+# Imports
 import os
 import gc
+
 import numpy as np
-
-# Python codes imports
-from AI_data_gen import DataGen_ordered
-from AI_plotting import Plotter_LSTM
-from common_alf import decorators
-from AI_models import UNetConvLSTM2D_long, UNetConvLSTM2D_short
-
 import tensorflow as tf
 
+from typeguard import typechecked
+from common_alf import decorators
+from AI_plotting import Plotter_LSTM
+from AI_data_gen import DataGen_ordered
+from AI_models import UNetConvLSTM2D_long, UNetConvLSTM2D_short
+
 # Parallelism tests to try and not use all the cpu cores. It failed though, but keeping it for later tries
-nb_cpus = 92
-tf.config.threading.set_intra_op_parallelism_threads(nb_cpus)
-tf.config.threading.set_inter_op_parallelism_threads(nb_cpus)
+# nb_cpus = 92
+# tf.config.threading.set_intra_op_parallelism_threads(nb_cpus)
+# tf.config.threading.set_inter_op_parallelism_threads(nb_cpus)
+
 
 class ModelRunner:
     """
@@ -27,15 +29,21 @@ class ModelRunner:
     Uses a list of model classes as inputs to run them given a list of arguments. Also runs the data generator class. 
     """
 
-    def __init__(self, ModelClassList: list, epochs_list: list = [200], kernel_sizes: list = [(3, 3)], image_size: int = 512, sequence_len: int = 8,
-                  mask_val: int = 0):
+    @typechecked  # checking that the arguments types are right at runtime
+    def __init__(self, ModelClassList: list, epochs_list: list = [200], kernel_sizes: list = [(3, 3)], image_size: int = 512, sequence_len: int = 8):
+        
         # Arguments
-        self.ModelClassList = ModelClassList
-        self.epochs_list = epochs_list
-        self.kernel_sizes = kernel_sizes
-        self.image_size = image_size
-        self.sequence_len = sequence_len
-        self.mask_val = mask_val
+        self.ModelClassList = ModelClassList  # list of the UNet LSTM model classes
+        self.epochs_list = epochs_list  # list of the number of epochs to be tested
+        self.kernel_sizes = kernel_sizes  # list of tuples of the kernel size to be tested
+        self.image_size = image_size  # pixel length of the post processed square images
+        self.sequence_len = sequence_len  # number of images used for each sequences (i.e. the time dependence length)
+
+        # Created attributes
+        self.train_inputs = None  # array of the training input images 
+        self.train_outputs = None  # same of the outputs
+        self.test_inputs = None  # array of the test input images 
+        self.test_outputs = None  # same for the outputs
 
         # Functions
         self.Data()
@@ -46,7 +54,7 @@ class ModelRunner:
         Generating the training and test data sets.
         """
         
-        kwargs = {'image_size': self.image_size, 'mask_val': self.mask_val, 'sequence_len': self.sequence_len}
+        kwargs = {'image_size': self.image_size, 'sequence_len': self.sequence_len}
 
         data = DataGen_ordered(**kwargs)
         self.train_inputs, self.train_outputs, self.test_inputs, self.test_outputs = data.Give_data()
@@ -57,8 +65,7 @@ class ModelRunner:
         """
 
         kwargs = {'train_images': self.train_inputs, 'train_masks': self.train_outputs, 
-                'test_images': self.test_inputs, 'test_masks': self.test_outputs, 'image_size': self.image_size,
-                'mask_val': 0}
+                'test_images': self.test_inputs, 'test_masks': self.test_outputs, 'image_size': self.image_size}
 
         for kernel_size in self.kernel_sizes:
             for epochs in self.epochs_list:
@@ -69,48 +76,57 @@ class ModelRunner:
                 for Model in self.ModelClassList:
                     Controller(model_class=Model, **kwargs)
 
-@decorators.running_time
+
+
 class Controller:
     """
     To compile, save and visualise the tests for a given model as input.
     """
 
-    def __init__(self, model_class, train_images, train_masks, test_images, test_masks, sequence_len=8, batch_size=5,
-                 optimizer='adam', loss='binary_crossentropy', metrics=['acc'], 
-                 epochs=200, kernel_size=(3, 3), image_size=512, result_cap=0.1, mask_val=0):
+    @decorators.running_time
+    def __init__(self, model_class: type, train_images: np.ndarray, train_masks: np.ndarray, test_images: np.ndarray, test_masks: np.ndarray,
+                 sequence_len: int = 8, batch_size: int = 5, optimizer: str = 'adam', loss: str = 'binary_crossentropy', metrics: list = ['acc'], 
+                 epochs: int = 200, kernel_size: tuple = (3, 3), image_size: int = 512, result_cap: float = 0.1):
 
         # The model class
-        self.model_class = model_class
+        self.model_class = model_class  # the model class object
 
         # Data inputs, outputs and tests
-        self.train_images = train_images
-        self.train_masks = train_masks
-        self.test_images = test_images
-        self.test_masks = test_masks
-        self.sequence_len = sequence_len
-        self.batch_size = batch_size
+        self.train_images = train_images  # array of the training input images 
+        self.train_masks = train_masks  # same of the outputs
+        self.test_images = test_images  # array of the test input images 
+        self.test_masks = test_masks  # same for the outputs
+        self.sequence_len = sequence_len  # number of images used for each sequences (i.e. the time dependence length)
+        self.batch_size = batch_size  # the batch size used in the model training
 
         # Model specific arguments
-        self.model_optimizer = optimizer
-        self.model_loss = loss
-        self.model_metrics = metrics
-        self.epochs = epochs
-        self.kernel_size = kernel_size  
-        self.image_size = image_size
-        self.mask_val = mask_val
+        self.model_optimizer = optimizer  # the optimiser used for the model
+        self.model_loss = loss  # the loss function used for the model
+        self.model_metrics = metrics  # the metrics type used for the model
+        self.epochs = epochs  # the number of epochs
+        self.kernel_size = kernel_size  # tuple representing the kernel size to be tested
+        self.image_size = image_size  # pixel length of the post processed square images
 
         # Visualisation argument
-        self.result_cap = result_cap
+        self.result_cap = result_cap  # float representing the value at which something is flagged as a mask (i.e. 1) in the output plot.
 
-        # Attributes
-        self.path = os.path.join(os.getcwd(), self.model_class.__name__, f'seq_len{self.sequence_len}', 'firstlayer64',
-                                 f'kernel{self.kernel_size[0]}_{self.kernel_size[1]}', 
-                                 f'Epochs{self.epochs}', 'no_init_mask')
-        os.makedirs(self.path, exist_ok=True)
+        # Created attributes
+        self.path = None  # string path of where the plots are saved
+        self.model = None  # instance of the model class
 
         # Functions
+        self.Paths()
         self.Execute()
         self.Plot()
+
+    def Paths(self):
+        """
+        To created the needed paths. Here it is only the output path.
+        """
+
+        self.path = os.path.join(os.getcwd(), self.model_class.__name__, f'seq_len{self.sequence_len}', f'kernel{self.kernel_size[0]}_{self.kernel_size[1]}', 
+                                 f'Epochs{self.epochs}')
+        os.makedirs(self.path, exist_ok=True)
 
     def Execute(self):
         """
