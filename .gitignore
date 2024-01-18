@@ -1,5 +1,6 @@
 *
 !*.py
+!*.ipynb
 !*.md
 !requirements.txt
 !still_in_testing_mode/
