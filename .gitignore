@@ -1,5 +1,5 @@
 *
 !*.py
-!README.md
+!*.md
 !requirements.txt
 !still_in_testing_mode/

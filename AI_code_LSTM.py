@@ -1,5 +1,5 @@
 """
-Main structure of the AI testing of the RNN (here LSTM) models.
+Main structure for the AI testing of the RNN (here LSTM) models.
 It imports the different created models, the data generator and the plotting function to save the results, the model and the weights
 corresponding to each test.
 """
@@ -33,7 +33,7 @@ class ModelRunner:
     def __init__(self, ModelClassList: list, epochs_list: list = [200], kernel_sizes: list = [(3, 3)], image_size: int = 512, sequence_len: int = 8):
         
         # Arguments
-        self.ModelClassList = ModelClassList  # list of the UNet LSTM model classes
+        self.ModelClassList = ModelClassList  # list of the U-Net LSTM model classes
         self.epochs_list = epochs_list  # list of the number of epochs to be tested
         self.kernel_sizes = kernel_sizes  # list of tuples of the kernel size to be tested
         self.image_size = image_size  # pixel length of the post processed square images

@@ -2,11 +2,13 @@
 To plot the test data next to the corresponding model prediction.
 """
 
+# Imports 
 import os
 import numpy as np
 import matplotlib.pyplot as plt
 
 from common_alf import PlotFunctions as Plot
+
 
 class Plotter:
     """
@@ -80,7 +82,7 @@ class Plotter_LSTM:
     """
 
     def __init__(self, path: str, test_images: np.ndarray, test_masks: np.ndarray, predicted_masks: np.array, image_size: int = 512):
-        
+
         # Arguments
         self.path = path
         self.test_images = test_images

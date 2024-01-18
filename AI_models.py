@@ -9,8 +9,10 @@ from tensorflow import keras
 class UNetModel:
     """
     First model and simplest model used.
-    As the name implies, is follows a UNet architecture by doing convolutions, setting a number of filters for each convolutions and
-    then downsampling and increasing the number of filters for the downsampled result. 
+    As the name implies, is follows a U-Net architecture by using CNNs, setting a number of filters for each convolutions and
+    then downsampling and increasing the number of filters for the downsampled result. \
+    
+    Source: https://github.com/nikhilroxtomar/UNet-Segmentation-in-Keras-TensorFlow/blob/master/unet-segmentation.ipynb
     """
 
     def __init__(self, image_size: int = 512, kernel_size: tuple = (3, 3)):
@@ -53,7 +55,7 @@ class UNetModel:
 
     def UNet(self):
         """
-        Main structure of the UNet model putting the downscaling, the bridge and the upscaling together.
+        Main structure of the U-Net architecture putting the downscaling, the bridge and the upscaling together.
         A small number of filters are used on the initial image and that number decreases while we downsample the image
         and increases when we upsample the result.
         """
@@ -90,9 +92,11 @@ class UNetModel:
 
 class UNetNDeepResidual:
     """
-    Second model used. It is supposed to be an "improved" version of the usual UNet model as deep residuals are also added in.
+    Second model used. It is supposed to be an "improved" version of the usual U-Net architecture as deep residuals are also added in.
     That being said, in my case, when I was looking at the test results, I wasn't able to see any improvements. In some cases, the 
-    results even seemed a little worse. Still, given the examples I had seen on internet, this method clearly has it's uses. 
+    results even seemed a little worse. Still, given the examples I had seen on internet, this method clearly has it's uses.
+    
+    Source: https://github.com/nikhilroxtomar/Deep-Residual-Unet/blob/master/Deep%20Residual%20UNet.ipynb 
     """
 
     def __init__(self, image_size: int = 512, kernel_size: tuple = (3, 3), padding: str = 'same', strides: int = 1):
@@ -165,7 +169,7 @@ class UNetNDeepResidual:
 
     def ResUNet(self):
         """
-        Main structure of the deep residual UNet model putting the downscaling, the bridge and the upscaling together.
+        Main structure of the deep residual U-Net architecture putting the downscaling, the bridge and the upscaling together.
         A small number of filters are used on the initial image and that number decreases while we downsample the image
         and increases when we upsample the result.
         """
@@ -216,7 +220,7 @@ class UNetNDeepResidual:
 
 class UNetConvLSTM2D_long:
     """
-    UNet architecture model using LSTM 2D convolutions for the downsampling, normal 2D convolutions
+    U-Net architecture model using LSTM 2D convolutions for the downsampling, normal 2D convolutions
     for the upsampling with skip connections using the downsampling LSTM 2D convolutions to try and better 
     capture the local and global information. 
     The downscaling tries to capture the temporal evolution while the upscaling tries to capture the individual properties for
@@ -253,7 +257,7 @@ class UNetConvLSTM2D_long:
         kwargs = {'padding':padding, 'strides':strides, 'activation':'relu'}
 
         us = keras.layers.UpSampling2D((2, 2))(x)
-        skip = keras.layers.Lambda(lambda x: x[:, -1, :, :, :])(skip)
+        skip = keras.layers.Lambda(lambda x: x[:, -1, :, :, :])(skip)  # choosing the last image 
         concat = keras.layers.Concatenate()([us, skip])
         c = keras.layers.Conv2D(filters, self.kernel_size, **kwargs)(concat)
         c = keras.layers.Conv2D(filters, self.kernel_size, **kwargs)(c)
@@ -305,10 +309,10 @@ class UNetConvLSTM2D_long:
 
 class UNetConvLSTM2D_short:
     """
-    Created UNet architecture model using LSTM 2D convolutions for the downsampling, normal 2D convolutions
+    Created U-Net architecture model using LSTM 2D convolutions for the downsampling, normal 2D convolutions
     for the upsampling with skip connections using the downsampling LSTM 2D convolutions to try and better 
     capture the local and global information. 
-    The difference with UNetConvLSTM2D_long is that only one LSTMconv is done per downscaling and one 2Dconv per upscaling.
+    The difference with UNetConvLSTM2D_long is that only one convLSTM is done per downscaling and one Conv2D per upscaling.
     """
 
     def __init__(self, sequence_len: int = 8, image_size: int = 512, kernel_size: tuple = (3, 3)):

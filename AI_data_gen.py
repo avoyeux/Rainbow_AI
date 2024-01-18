@@ -134,7 +134,7 @@ class DataGen:
 
     def on_epoch_end(self):
         """
-        No clue what this does but in the video I was looking at for Unet architectures, this was done. 
+        No clue what this does but in the video I was looking at for U-Net architectures, this was done. 
         Should be useless as my way of doing things is a little different but it's here for safe keeping.
         """
 
