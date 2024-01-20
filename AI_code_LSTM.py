@@ -15,7 +15,7 @@ from typeguard import typechecked
 from common_alf import decorators
 from AI_plotting import Plotter_LSTM
 from AI_data_gen import DataGen_ordered
-from AI_models import UNetConvLSTM2D_long, UNetConvLSTM2D_short
+from AI_models import UNetConvLSTM2D_long, UNetConvLSTM2D_short, ImprovedUNetConvLSTM2D_GPU_test
 
 # Parallelism tests to try and not use all the cpu cores. It failed though, but keeping it for later tries
 # nb_cpus = 92
@@ -75,7 +75,6 @@ class ModelRunner:
                 # Running the different models
                 for Model in self.ModelClassList:
                     Controller(model_class=Model, **kwargs)
-
 
 
 class Controller:
@@ -177,9 +176,9 @@ class Controller:
 if __name__ == '__main__':
 
     # Running the code for different models
-    kernel_sizes = [(3, 3), (5, 5), (7, 7), (9, 9)]
-    epochs_list = [1, 5, 10, 25, 50, 100, 200]
-    models_list = [UNetConvLSTM2D_short]
+    kernel_sizes = [(5, 5), (9, 9)]
+    epochs_list = [5, 10, 25, 50, 100, 200]
+    models_list = [ImprovedUNetConvLSTM2D_GPU_test]
 
     ModelRunner(ModelClassList=models_list, kernel_sizes=kernel_sizes, epochs_list=epochs_list)
 
