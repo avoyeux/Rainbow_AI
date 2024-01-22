@@ -322,6 +322,5 @@ class DataGen_ordered:
 
 if __name__=='__main__':
 
-    test = DataGen_ordered()
-    train_inputs, train_outputs, test_input, test_output = test.Give_data()
+    pass
     
