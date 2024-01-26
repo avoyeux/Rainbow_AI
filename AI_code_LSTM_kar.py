@@ -182,25 +182,53 @@ class Controller:
         del self.model
         clear_session()
         gc.collect()
+        print('Freeing up the VRAM')
+
+    def VRAM_evaluate(self, images, masks):
+        """
+        To save some VRAM by uploading the model and by deleting it right after.
+        Had to do this as the RAM fills up quite quickly when using a high number of filters.
+        Probably doing something wrong somewhere, but here is the quick patch up.
+        """
+
+        best_model = load_model(os.path.join(self.path, 'model.keras'), safe_mode=False)
+        loss, accuracy = best_model.evaluate(images, masks, batch_size=self.batch_size)
+        del best_model  # probably don't need this line but just to be sure
+        clear_session()
+        gc.collect()
+        return loss, accuracy
+    
+    def VRAM_prediction(self, images):
+        """
+        To save some VRAM by uploading the model and by deleting it right after.
+        Had to do this as the RAM fills up quite quickly when using a high number of filters.
+        Probably doing something wrong somewhere, but here is the quick patch up.
+        """
+
+        best_model = load_model(os.path.join(self.path, 'model.keras'), safe_mode=False)
+        y_pred = best_model.predict(images, batch_size=self.batch_size)
+        del best_model  # probably don't need this line but just to be sure
+        clear_session()
+        gc.collect()
+        return y_pred
 
     def Statistics(self):
         """
         To save the stats for each model in a csv file.
         """
 
-        best_model = load_model(os.path.join(self.path, 'model.keras'), safe_mode=False)
         training_time = self.end_time - self.start_time
-
-        train_loss, train_accuracy = best_model.evaluate(self.train_images, self.train_masks)
-        val_loss, val_accuracy = best_model.evaluate(self.validation_images, self.validation_masks)
-        test_loss, test_accuracy = best_model.evaluate(self.test_images, self.test_masks)
+        print(f'Best model uploaded')
+        train_loss, train_accuracy = self.VRAM_evaluate(self.train_images, self.train_masks)  
+        val_loss, val_accuracy = self.VRAM_evaluate(self.validation_images, self.validation_masks)
+        test_loss, test_accuracy = self.VRAM_evaluate(self.test_images, self.test_masks)
 
         print('starting predictions:')
-        train_y_pred = best_model.predict(self.train_images)
+        train_y_pred = self.VRAM_prediction(self.train_images)
         print('training predictions done.')
-        val_y_pred = best_model.predict(self.validation_images)
+        val_y_pred = self.VRAM_prediction(self.validation_images)
         print('validation predictions done.')
-        test_y_pred = best_model.predict(self.test_images)
+        test_y_pred = self.VRAM_prediction(self.test_images)
         print('testing predictions done.')
 
         train_y_pred = (train_y_pred > 0.5).astype('uint8').flatten()
@@ -281,8 +309,11 @@ class MultiGPUs:
 
 
 if __name__ == '__main__':
+    gpus = tf.config.experimental.list_physical_devices('GPU')
+    for gpu in gpus:
+        tf.config.experimental.set_memory_growth(gpu, True)
 
     # Running the code for different models
-    ModelRunner(ModelClassList=[VaryingLSTMKernelSizes_2Inputs], DataClass=KarineDataGenOrdered_2Inputs, kernel_size_LSTM=[(9, 9), (5, 5), (3, 3)], 
-                kernel_size_conv=[(3, 3), (5, 5), (7, 7)], epochs=1000, first_filters=32, batch_size=5)
+    ModelRunner(ModelClassList=[VaryingLSTMKernelSizes_2Inputs], DataClass=KarineDataGenOrdered_2Inputs, kernel_size_LSTM=[(5, 5), (5, 5), (5, 5)], 
+                kernel_size_conv=[(3, 3), (3, 3), (3, 3)], epochs=1000, first_filters=128, batch_size=1)
 
