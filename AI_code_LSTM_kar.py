@@ -212,7 +212,7 @@ class Controller:
         gc.collect()
         return y_pred
 
-    def Statistics(self):
+    def Statistics_old(self):
         """
         To save the stats for each model in a csv file.
         """
@@ -256,6 +256,48 @@ class Controller:
         df_final = df_transposed.reset_index()
         df_final.columns = ['Metric', self.ModelClass.__name__]
         df_final.to_csv(os.path.join(self.path, 'statistics.csv'), index=False)
+        print('csv file saved.')
+
+    def Statistics(self):
+        """
+        To save the stats for each model in a csv file.
+        """
+
+        training_time = self.end_time - self.start_time
+        print(f'Best model uploaded')
+        train_loss, train_accuracy = self.VRAM_evaluate(self.train_images, self.train_masks)  
+        val_loss, val_accuracy = self.VRAM_evaluate(self.validation_images, self.validation_masks)
+        test_loss, test_accuracy = self.VRAM_evaluate(self.test_images, self.test_masks)
+
+        print('starting predictions:')
+        train_y_pred = self.VRAM_prediction(self.train_images)
+        print('training predictions done.')
+        val_y_pred = self.VRAM_prediction(self.validation_images)
+        print('validation predictions done.')
+        test_y_pred = self.VRAM_prediction(self.test_images)
+        print('testing predictions done.')
+
+        train_y_pred = (train_y_pred > 0.5).astype('uint8').flatten()
+        val_y_pred = (val_y_pred > 0.5).astype('uint8').flatten()
+        test_y_pred = (test_y_pred > 0.5).astype('uint8').flatten()
+
+        train_precision, train_recall, train_f1, train_mse, train_mae, train_roc_auc, train_iou = self.Stats_functions(self.train_masks.flatten(), train_y_pred)
+        val_precision, val_recall, val_f1, val_mse, val_mae, val_roc_auc, val_iou = self.Stats_functions(self.validation_masks.flatten(), val_y_pred)
+        test_precision, test_recall, test_f1, test_mse, test_mae, test_roc_auc, test_iou = self.Stats_functions(self.test_masks.flatten(), test_y_pred)
+        print('stats finished.')
+        metrics = {'Info/path': [self.path],
+                   'Training Time (s)': [training_time], 'Epochs': [self.best_epochs], 'Train loss': [train_loss], 'Train accuracy': [train_accuracy],
+                   'Validation loss': [val_loss], 'Validation accuracy': [val_accuracy], 'Test loss': [test_loss], 'Test accuracy': [test_accuracy],
+                   'Train precision': [train_precision], 'Validation precision': [val_precision], 'Test precision': [test_precision], 
+                   'Train recall': [train_recall], 'Validation recall': [val_recall], 'Test recall': [test_recall], 
+                   'Train f1': [train_f1], 'Validation f1': [val_f1], 'Test f1': [test_f1],  
+                   'Train mse': [train_mse], 'Validation mse': [val_mse], 'Test mse': [test_mse],
+                   'Train mae': [train_mae], 'Validation mae': [val_mae], 'Test mae': [test_mae], 
+                   'Train roc auc': [train_roc_auc], 'Validation roc auc': [val_roc_auc], 'Test roc auc': [test_roc_auc],
+                   'Train iou': [train_iou], 'Validation iou': [val_iou], 'Test iou': [test_iou]}
+        
+        df = pd.DataFrame(metrics)
+        df.to_csv(os.path.join(self.path, 'statistics.csv'), index=False)
         print('csv file saved.')
 
     def Stats_functions(self, labels, predictions):
