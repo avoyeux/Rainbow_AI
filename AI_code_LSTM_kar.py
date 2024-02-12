@@ -356,6 +356,6 @@ if __name__ == '__main__':
         tf.config.experimental.set_memory_growth(gpu, True)
 
     # Running the code for different models
-    ModelRunner(ModelClassList=[VaryingLSTMKernelSizes_2Inputs], DataClass=KarineDataGenOrdered_2Inputs, kernel_size_LSTM=[(5, 5), (5, 5), (5, 5)], 
-                kernel_size_conv=[(3, 3), (3, 3), (3, 3)], epochs=1000, first_filters=128, batch_size=1)
+    ModelRunner(ModelClassList=[VaryingLSTMKernelSizes_2Inputs], DataClass=KarineDataGenOrdered_2Inputs, kernel_size_LSTM=[(3, 3), (5, 5), (7, 7)], 
+                kernel_size_conv=[(7, 7), (5, 5), (3, 3)], epochs=1000, first_filters=128, batch_size=1)
 
